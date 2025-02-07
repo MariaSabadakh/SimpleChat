@@ -1,1 +1,1 @@
-# This is me project - SimpleChat
+# SimpleChat
