@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 80%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        .messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 5px;
+            background: #e1ffc7;
+            align-self: flex-start;
+        }
+        .message.user {
+            background: #c7dfff;
+            align-self: flex-end;
+        }
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px;
+            background: #5cb85c;
+            border: none;
+            color: white;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #4cae4c;
+        }
+        .logout {
+            text-align: right;
+            margin-bottom: 10px;
+        }
+        .logout a {
+            color: red;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="logout">
+        <a th:href="@{/auth/logout}">Logout</a>
+    </div>
+    <h2>Chat</h2>
+
+    <div class="messages" id="messages"></div>
+
+    <div class="input-container">
+        <input type="text" id="messageInput" placeholder="Type a message..." />
+        <button onclick="sendMessage()">Send</button>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script>
+    let stompClient = null;
+    let username = "[[${session.user}]]";
+    // Получаем имя из сессии
+
+    function connect() {
+        let socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function () {
+            stompClient.subscribe('/topic/chat', function (message) {
+                let msg = JSON.parse(message.body);
+                displayMessage(msg.sender, msg.content);
+            });
+        });
+    }
+
+    function sendMessage() {
+        let input = document.getElementById("messageInput");
+        let content = input.value.trim();
+        if (content === "") return;
+
+        stompClient.send("/app/sendMessage", {}, JSON.stringify({ content: content }));
+
+        input.value = "";
+    }
+
+    function displayMessage(sender, content) {
+        let messagesDiv = document.getElementById("messages");
+
+        let messageElement = document.createElement("div");
+        messageElement.classList.add("message");
+
+        if (sender === username) {
+            messageElement.classList.add("user");
+        }
+
+        messageElement.innerHTML = `<b>${sender}:</b> ${content}`;
+        messagesDiv.appendChild(messageElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    window.onload = connect;
+</script>
+</body>
+</html>
