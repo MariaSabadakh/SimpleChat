@@ -17,11 +17,11 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
     }
 
     @Override
-    public void registerStompEndpoints(StompEndpointRegistry registry) { 
+    public void registerStompEndpoints(StompEndpointRegistry registry) {
         registry.addEndpoint("/ws")
-                .setAllowedOriginPatterns("*")
+                .setAllowedOriginPatterns("http://localhost:8080") // Разрешаем только нужные домены
                 .withSockJS()
-                .setInterceptors(webSocketInterceptor); // Используем зарегистрированный бин
+                .setInterceptors(webSocketInterceptor);
     }
 
     @Override

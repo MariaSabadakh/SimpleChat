@@ -91,31 +91,59 @@
     </div>
 </div>
 
+<!-- Скрытый элемент с username -->
+<span id="username" th:text="${username}" style="display: none;"></span>
+
+<!-- Устанавливаем username из Thymeleaf -->
+<script>
+    let username = document.getElementById("username").innerText.trim();
+    console.log("Username из Thymeleaf:", username);
+</script>
+
+<!-- Подключение WebSocket -->
 <script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
 <script>
     let stompClient = null;
-    let username = "[[${session.user}]]";
-    // Получаем имя из сессии
+    let chatId = 1; // ID текущего чата
 
     function connect() {
-        let socket = new SockJS('/ws');
+        let socket = new SockJS('/ws');  // Подключение к WebSocket
         stompClient = Stomp.over(socket);
 
         stompClient.connect({}, function () {
-            stompClient.subscribe('/topic/chat', function (message) {
+            console.log("WebSocket подключен!");
+
+            stompClient.subscribe(`/topic/chat/${chatId}`, function (message) {
                 let msg = JSON.parse(message.body);
-                displayMessage(msg.sender, msg.content);
+                let sender = msg.sender || (msg.user ? msg.user.username : "Аноним");
+                displayMessage(sender, msg.content);
             });
+
+        }, function (error) {
+            console.error("Ошибка WebSocket:", error);
         });
     }
 
     function sendMessage() {
+        if (!stompClient || !stompClient.connected) {
+            console.error("WebSocket не подключен!");
+            return;
+        }
+
         let input = document.getElementById("messageInput");
         let content = input.value.trim();
         if (content === "") return;
 
-        stompClient.send("/app/sendMessage", {}, JSON.stringify({ content: content }));
+        let message = {
+            sender: username,
+            chat: { id: chatId },
+            content: content
+        };
+
+        console.log("Отправка сообщения:", message);
+        stompClient.send(`/app/chat/${chatId}/send`, {}, JSON.stringify(message));
 
         input.value = "";
     }
@@ -125,6 +153,8 @@
 
         let messageElement = document.createElement("div");
         messageElement.classList.add("message");
+
+        sender = sender || "Аноним";
 
         if (sender === username) {
             messageElement.classList.add("user");
@@ -137,5 +167,6 @@
 
     window.onload = connect;
 </script>
+
 </body>
 </html>

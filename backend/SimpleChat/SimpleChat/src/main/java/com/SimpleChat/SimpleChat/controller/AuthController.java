@@ -20,10 +20,23 @@ public class AuthController {
                            @RequestParam String password,
                            Model model) {
         if (userService.registerUser(username, email, password)) {
-            return "redirect:/login"; // Перенаправление на вход после успешной регистрации
+            model.addAttribute("message", "Check your email to confirm your account!");
+            return "register"; // Показываем страницу с сообщением
         } else {
             model.addAttribute("error", "User already exists!");
-            return "register"; // Оставляем пользователя на странице регистрации с ошибкой
+            return "register";
+        }
+    }
+
+    @GetMapping("/confirm-email")
+    public String confirmEmail(@RequestParam String token, Model model) {
+        boolean isConfirmed = userService.confirmEmail(token);
+        if (isConfirmed) {
+            model.addAttribute("message", "Your email is confirmed! You can now log in.");
+            return "login";
+        } else {
+            model.addAttribute("error", "Invalid or expired token!");
+            return "register";
         }
     }
 }

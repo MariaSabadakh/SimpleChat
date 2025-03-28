@@ -21,9 +21,10 @@ public class MessageService {
         this.userRepository = userRepository;
     }
 
-    public List<Message> getMessagesByChatId(Long chatId) {
+    public List<Message> getMessagesByChat(Long chatId) {
         return messageRepository.findByChatIdOrderByTimestampAsc(chatId);
     }
+
 
     public Message sendMessage(Long chatId, Long userId, String content) {
         Chat chat = chatRepository.findById(chatId)
@@ -31,7 +32,7 @@ public class MessageService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        Message message = new Message(chat, user, content, user.getUsername()); // Передаем senderName
+        Message message = new Message(chat, user, content); // Передаем senderName
         return messageRepository.save(message);
     }
 }
