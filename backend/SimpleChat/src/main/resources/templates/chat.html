@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title th:text="#{chat.title}">Chat</title>
+    <style>
+        /* Ваши стили */
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f4f4f4;
+        }
+        .container {
+            width: 80%;
+            max-width: 600px;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            flex-direction: column;
+        }
+        .messages {
+            height: 300px;
+            overflow-y: auto;
+            border: 1px solid #ddd;
+            padding: 10px;
+            margin-bottom: 10px;
+            border-radius: 5px;
+            background: #fafafa;
+        }
+        .message {
+            margin-bottom: 10px;
+            padding: 8px;
+            border-radius: 5px;
+            background: #e1ffc7;
+            align-self: flex-start;
+        }
+        .message.user {
+            background: #c7dfff;
+            align-self: flex-end;
+        }
+        .input-container {
+            display: flex;
+            gap: 10px;
+        }
+        input {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px;
+            background: #5cb85c;
+            border: none;
+            color: white;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        button:hover {
+            background: #4cae4c;
+        }
+        .logout {
+            text-align: right;
+            margin-bottom: 10px;
+        }
+        .logout a {
+            color: red;
+            text-decoration: none;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="logout">
+        <a th:href="@{/auth/logout}" th:text="#{chat.logout}">Logout</a>
+    </div>
+
+    <form method="get" action="">
+        <select name="lang" onchange="this.form.submit()">
+            <option value="en" th:selected="${#locale.language == 'en'}">English</option>
+            <option value="ru" th:selected="${#locale.language == 'ru'}">Русский</option>
+        </select>
+    </form>
+
+    <h2 th:text="#{chat.title}">Chat</h2>
+
+    <div class="messages" id="messages"></div>
+
+    <div class="input-container">
+        <input type="text" id="messageInput" th:placeholder="#{chat.input.placeholder}" />
+        <button onclick="sendMessage()" th:text="#{chat.send}">Send</button>
+    </div>
+
+    <!-- Скрытый username -->
+    <span id="username" th:text="${username}" style="display: none;"></span>
+</div>
+
+<script>
+    // Подключение WebSocket
+    let username = document.getElementById("username").innerText.trim();
+    let stompClient = null;
+    let chatId = 1;
+
+    function connect() {
+        let socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+
+        stompClient.connect({}, function () {
+            stompClient.subscribe(`/topic/chat/${chatId}`, function (message) {
+                let msg = JSON.parse(message.body);
+                let sender = msg.sender || (msg.user ? msg.user.username : "Anonymous");
+                displayMessage(sender, msg.content);
+            });
+        }, function (error) {
+            console.error("WebSocket error:", error);
+        });
+    }
+
+    function sendMessage() {
+        if (!stompClient || !stompClient.connected) return;
+
+        let input = document.getElementById("messageInput");
+        let content = input.value.trim();
+        if (content === "") return;
+
+        let message = {
+            sender: username,
+            chat: { id: chatId },
+            content: content
+        };
+
+        stompClient.send(`/app/chat/${chatId}/send`, {}, JSON.stringify(message));
+        input.value = "";
+    }
+
+    function displayMessage(sender, content) {
+        let messagesDiv = document.getElementById("messages");
+
+        let messageElement = document.createElement("div");
+        messageElement.classList.add("message");
+
+        if (sender === username) {
+            messageElement.classList.add("user");
+        }
+
+        messageElement.innerHTML = `<b>${sender}:</b> ${content}`;
+        messagesDiv.appendChild(messageElement);
+        messagesDiv.scrollTop = messagesDiv.scrollHeight;
+    }
+
+    window.onload = connect;
+</script>
+
+<script src="https://cdn.jsdelivr.net/npm/sockjs-client/dist/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+
+</body>
+</html>
